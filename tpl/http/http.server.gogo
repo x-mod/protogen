@@ -1,0 +1,66 @@
+{{define "http.server"}}
+{{- $obj := . -}}
+
+{{range $service := $obj.Services -}}
+func Register{{$service.Name}}HTTPServer(s *server.HTTPServer, srv {{$service.Name}}Server) error {
+	return s.RegisterService(&_{{$service.Name}}_HTTP_serviceDesc, srv)
+}
+
+var _{{$service.Name}}_HTTP_serviceDesc = server.ServiceDescription{
+	PackageName:  "{{$obj.Package.Name}}",
+	ServiceName:  "{{$service.Name}}",
+	Implemention: (*{{$service.Name}}Server)(nil),
+    {{range $sopt := $service.Options -}}
+        {{- if eq $sopt.Name "(options.service)" -}}
+            Option: &options.ServiceOption{
+                {{- range $k, $v := $sopt.Constant.Map}}
+                    {{- if eq $k "version"}}
+                    Version: "{{$v.Source}}",
+                    {{end -}}
+                {{end -}}
+            },
+        {{- end -}}
+    {{- end}}
+	Methods: []server.MethodDescription{
+        {{range $method := $service.Methods -}}
+		{
+			MethodName: "{{$method.Name}}",
+			Handler:    _{{$service.Name}}_{{$method.Name}}_HTTP_Handler,
+            {{range $option := $method.Options -}}
+                {{- if eq $option.Name "(options.http)" -}}
+                Option: &options.HttpOption{
+                    {{- range $k, $v := $option.Constant.Map -}}
+                        {{- if eq $k "method"}}
+                        Method: "{{$v.Source}}",
+                        {{- end -}}
+                        {{- if eq $k "uri"}}
+                        Uri: "{{$v.Source}}",
+                        {{- end -}}
+                    {{- end}}
+                },                        
+                {{- end -}}
+            {{- end}}
+		},                
+        {{- end}}
+	},
+}
+
+{{range $method := $service.Methods -}}
+func _{{$service.Name}}_{{$method.Name}}_HTTP_Handler(srv interface{}, ctx context.Context, wr http.ResponseWriter, req *http.Request) {
+	in := new({{$method.RequestType}})
+	err := server.PBRequest(req, in)
+	if err != nil {
+		server.PBResponse(wr, nil, err)
+		return
+	}
+	out, err := srv.({{$service.Name}}Server).{{$method.Name}}(server.PBContext(req, ctx), in)
+	if err != nil {
+		server.PBResponse(wr, nil, err)
+		return
+	}
+	server.PBResponse(wr, out, err)
+}
+{{- end}}
+{{- end}} 
+{{end -}}
+

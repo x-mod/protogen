@@ -1,0 +1,62 @@
+{{define "http.client"}}
+{{- $obj := . -}}
+
+{{range $service := $obj.Services -}}
+type HTTP{{$service.Name}}Client struct {
+	*client.HTTPClient
+}
+
+func NewHTTP{{$service.Name}}Client(opts ...client.HTTPClientOpt) {{$service.Name}}Client {
+	gopts := []client.HTTPClientOpt{}
+	gopts = append(gopts, client.Version("v1"))
+	gopts = append(gopts, client.PackageName("{{$obj.Package.Name}}"))
+	gopts = append(gopts, client.ServiceName("{{$service.Name}}"))
+    {{- range $sopt := $service.Options -}}
+        {{- if eq $sopt.Name "(options.service)" -}}
+            {{- range $k, $v := $sopt.Constant.Map -}}
+                {{- if eq $k "version"}}
+                gopts = append(gopts, client.Version("{{$v.Source}}"))
+                {{- end -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end}}
+	gopts = append(gopts, opts...)
+	return &HTTP{{$service.Name}}Client{
+		HTTPClient: client.NewHTTPClient(gopts...),
+	}
+}
+
+{{range $method := $service.Methods -}}
+func (c *HTTP{{$service.Name}}Client) {{$method.Name}}(ctx context.Context, in *{{$method.RequestType}}, opts ...grpc.CallOption) (*{{$method.ReturnsType}}, error) {
+	req, err := c.MakeRequest(
+		"{{$method.Name}}",
+        {{- range $option := $method.Options -}}
+            {{- if eq $option.Name "(options.http)" -}}
+                {{- range $k, $v := $option.Constant.Map -}}
+                    {{- if eq $k "method"}}
+                    httpclient.Method("{{$v.Source}}"),
+                    {{- end -}}
+                    {{- if eq $k "uri"}}
+                    httpclient.URL(httpclient.URI("{{$v.Source}}")),
+                    {{- end -}}
+                {{- end -}}                      
+            {{- end -}}
+        {{- end}}
+		httpclient.Content(httpclient.PBJSON(in)),
+	)
+	if err != nil {
+		return nil, err
+	}
+	out := new({{$method.ReturnsType}})
+	if err := c.Execute(ctx, req, client.PBResponse(out)); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+{{- end}}
+{{- end}}
+{{end -}}
+
+
+
+
