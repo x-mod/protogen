@@ -1,61 +1,111 @@
-{{define "http.client" -}}
-{{- $obj := . -}}
+{{define "http.client" -}}{{- $obj := . -}}
+package {{$obj.Package.Name}}
+
+import (
+	"context"
+	"crypto/tls"
+
+	pb "code.subscriber.one/subscriber/sendmail/pb/sendmail/v1"
+	"github.com/x-mod/httpclient"
+	"github.com/x-mod/httpclient/grpc"
+)
+
 {{- range $service := $obj.Services}}
-type HTTP{{$service.Name}}Client struct {
-	*client.HTTPClient
+{{- $version := "v0" -}}
+{{range $sopt := $service.Options -}}
+{{- if eq $sopt.Name "(options.service)" -}}
+    {{- range $k, $v := $sopt.Constant.Map}}
+        {{- if eq $k "version"}}
+        {{- $version = $v.Source -}}
+        {{end -}}
+    {{end -}}
+{{- end -}}
+{{- end}}
+
+type {{$service.Name}}HTTPClient struct {
+	addr       string
+	schema     string
+	credential *tls.Config
+	client     *httpclient.Client
 }
 
-func NewHTTP{{$service.Name}}Client(opts ...client.HTTPClientOpt) {{$service.Name}}Client {
-	gopts := []client.HTTPClientOpt{}
-	gopts = append(gopts, client.Version("v1"))
-	gopts = append(gopts, client.PackageName("{{$obj.Package.Name}}"))
-	gopts = append(gopts, client.ServiceName("{{$service.Name}}"))
-    {{- range $sopt := $service.Options -}}
-        {{- if eq $sopt.Name "(options.service)" -}}
-            {{- range $k, $v := $sopt.Constant.Map -}}
-                {{- if eq $k "version"}}
-                gopts = append(gopts, client.Version("{{$v.Source}}"))
-                {{- end -}}
-            {{- end -}}
-        {{- end -}}
-    {{- end}}
-	gopts = append(gopts, opts...)
-	return &HTTP{{$service.Name}}Client{
-		HTTPClient: client.NewHTTPClient(gopts...),
+type {{$service.Name}}HTTPClientOpt func(*{{$service.Name}}HTTPClient)
+
+func TLSConfig(credential *tls.Config) {{$service.Name}}HTTPClientOpt {
+	return func(c *{{$service.Name}}HTTPClient) {
+		c.credential = credential
 	}
 }
 
-{{range $method := $service.Methods -}}
-func (c *HTTP{{$service.Name}}Client) {{$method.Name}}(ctx context.Context, in *{{$method.RequestType}}, opts ...grpc.CallOption) (*{{$method.ReturnsType}}, error) {
-	req, err := c.MakeRequest(
-		"{{$method.Name}}",
-        {{- range $option := $method.Options -}}
-            {{- if eq $option.Name "(options.http)" -}}
-                {{- range $k, $v := $option.Constant.Map -}}
-                    {{- if eq $k "method"}}
-                    httpclient.Method("{{$v.Source}}"),
-                    {{- end -}}
-                    {{- if eq $k "uri"}}
-                    httpclient.URL(httpclient.URI("{{$v.Source}}")),
-                    {{- end -}}
-                {{- end -}}                      
-            {{- end -}}
-        {{- end}}
-		httpclient.Content(httpclient.PBJSON(in)),
+func Schema(schema string) {{$service.Name}}HTTPClientOpt {
+	return func(c *{{$service.Name}}HTTPClient) {
+		c.schema = schema
+	}
+}
+
+func Client(client *httpclient.Client) {{$service.Name}}HTTPClientOpt {
+	return func(c *{{$service.Name}}HTTPClient) {
+		c.client = client
+	}
+}
+
+func New{{$service.Name}}HTTPClient(addr string, opts ...{{$service.Name}}HTTPClientOpt) *{{$service.Name}}HTTPClient {
+	c := &{{$service.Name}}HTTPClient{schema: "http", addr: addr}
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.credential != nil {
+		c.schema = "https"
+	}
+	if c.client == nil {
+		c.client = httpclient.New(httpclient.TLSConfig(c.credential))
+	}
+	return c
+}
+
+{{range $method := $service.Methods}}
+    {{- $httpmethod := "post" -}}
+    {{- $uri := "" -}}
+    {{- range $option := $method.Options -}}
+        {{- if eq $option.Name "(options.http)" -}}
+            {{- range $k, $v := $option.Constant.Map -}}
+                {{- if eq $k "method"}}
+                {{- $httpmethod = $v.Source -}}
+                {{- end -}}
+                {{- if eq $k "uri"}}
+                {{- $uri = $v.Source -}}
+                {{- end -}}
+            {{- end}}
+        {{- end -}}
+    {{- end -}}
+func (c *{{$service.Name}}HTTPClient) {{$method.Name}}(ctx context.Context, in *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
+	req, err := httpclient.MakeRequest(
+		httpclient.Method("{{$httpmethod}}"),
+		httpclient.URL(
+			httpclient.Schema(c.schema),
+			httpclient.Host(c.addr),
+            {{if eq $uri "" -}}
+            httpclient.URI(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
+            {{- else -}}
+            httpclient.URI("{{$uri}}"),
+            {{- end}}
+		),
+		httpclient.Content(
+			httpclient.PBJSON(in),
+		),
 	)
 	if err != nil {
 		return nil, err
 	}
-	out := new({{$method.ReturnsType}})
-	if err := c.Execute(ctx, req, client.PBResponse(out)); err != nil {
+	out := &pb.{{$method.ReturnsType}}{}
+	if err := c.client.Execute(ctx, req, grpc.PBJSONResponse(out)); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 {{end -}}
+
 {{- end}}
 {{end -}}
-
-
 
 
