@@ -1,0 +1,49 @@
+{{define "grpc.server" -}}{{- $obj := . -}}
+package {{$obj.Package.Name}}
+
+import (
+    "context"
+	"log"
+	"net"
+    
+    pb "{{$obj.ImportPb}}"
+    "google.golang.org/grpc"
+    "github.com/x-mod/errors"
+)
+
+{{- range $service := $obj.Services}}
+type {{$service.Name}}GrpcService struct{
+    addr string
+	gsrv *grpc.Server
+}
+
+func New{{$service.Name}}GrpcService(addr string, opts ...grpc.ServerOption) *{{$service.Name}}GrpcService {
+	service := &{{$service.Name}}GrpcService{addr: addr}
+    gserver := grpc.NewServer(opts...)
+    service.gsrv = gserver
+    return service
+}
+
+func (svc *{{$service.Name}}GrpcService) Serve(ctx context.Context) error {
+    pb.Register{{$service.Name}}Server(svc.gsrv, svc)
+    ln, err := net.Listen("tcp", svc.addr)
+	if err != nil {
+		return err
+	}
+	log.Println("service ({{$service.Name}}) serving at ", svc.addr)
+	return svc.gsrv.Serve(ln)
+}
+
+func (svc *{{$service.Name}}GrpcService) Stop() {
+	svc.gsrv.Stop()
+}
+
+{{range $method := $service.Methods -}}
+func (svc *{{$service.Name}}GrpcService) {{$method.Name}}(ctx context.Context, req *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
+	return nil, errors.New("{{$method.Name}} unimplemented")
+}
+{{end -}}
+
+{{- end}}
+{{end -}}
+

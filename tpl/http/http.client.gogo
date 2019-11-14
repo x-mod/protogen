@@ -1,7 +1,6 @@
-{{define "http.client"}}
+{{define "http.client" -}}
 {{- $obj := . -}}
-
-{{range $service := $obj.Services -}}
+{{- range $service := $obj.Services}}
 type HTTP{{$service.Name}}Client struct {
 	*client.HTTPClient
 }
@@ -53,7 +52,7 @@ func (c *HTTP{{$service.Name}}Client) {{$method.Name}}(ctx context.Context, in *
 	}
 	return out, nil
 }
-{{- end}}
+{{end -}}
 {{- end}}
 {{end -}}
 

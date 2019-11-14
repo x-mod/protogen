@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/emicklei/proto"
+	"github.com/spf13/viper"
 	"github.com/x-mod/cmd"
 	"github.com/x-mod/errors"
 )
@@ -18,6 +19,7 @@ var ProtoSuffix = ".proto"
 type AST struct {
 	*proto.Proto
 	Filename string
+	ImportPb string
 	Package  *proto.Package
 	Imports  []*proto.Import
 	Options  []*proto.Option
@@ -116,8 +118,8 @@ func getInputFilesBySuffix(dir string, suffix string) ([]string, error) {
 	return files, nil
 }
 
-func generate(in string, out string, prefix string, suffix string, objects ...string) error {
-	tpl, err := GetTemplate(prefix)
+func generate(in string, out string, pb string, suffix string, prefix string, objects ...string) error {
+	tpl, err := getTemplate(prefix)
 	if err != nil {
 		return errors.Annotate(err, "get templates")
 	}
@@ -143,6 +145,7 @@ func generate(in string, out string, prefix string, suffix string, objects ...st
 		}
 
 		ast := build(filename, pt)
+		ast.ImportPb = pb
 		for _, obj := range objects {
 			outfile := filepath.Join(out, fmt.Sprintf("%s.%s.go", filenameTrimSuffix, obj))
 			wr, err := os.OpenFile(outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -161,23 +164,56 @@ func generate(in string, out string, prefix string, suffix string, objects ...st
 			}
 		}
 	}
-	return CopyTemplateExcludeSuffix(prefix, suffix, out, true)
+	return copyFilesExcludeSuffix(prefix, suffix, out, true)
 }
 
 func init() {
 	cmd.Add(
-		cmd.Name("http"),
-		cmd.Short("generate http code from protobuf"),
-		cmd.Main(HttpMain),
+		cmd.Path("/http/server"),
+		cmd.Short("generate http server files from protobuf"),
+		cmd.Main(HttpServer),
 	)
 	cmd.Add(
-		cmd.Name("grpc"),
-		cmd.Short("generate grpc code from protobuf"),
-		cmd.Main(GrpcMain),
+		cmd.Path("/http/client"),
+		cmd.Short("generate http client files from protobuf"),
+		cmd.Main(HttpClient),
 	)
 	cmd.Add(
-		cmd.Name("impl"),
-		cmd.Short("generate implementation skeleton codes"),
-		cmd.Main(ImplMain),
+		cmd.Path("/grpc/server"),
+		cmd.Short("generate grpc server files from protobuf"),
+		cmd.Main(GrpcServer),
 	)
+	cmd.Add(
+		cmd.Path("/grpc/client"),
+		cmd.Short("generate grpc client files from protobuf"),
+		cmd.Main(GrpcClient),
+	)
+}
+
+func HttpServer(c *cmd.Command, args []string) error {
+	return Main(c, []string{"http", "server"})
+}
+func HttpClient(c *cmd.Command, args []string) error {
+	return Main(c, []string{"http", "client"})
+}
+func GrpcServer(c *cmd.Command, args []string) error {
+	return Main(c, []string{"grpc", "server"})
+}
+func GrpcClient(c *cmd.Command, args []string) error {
+	return Main(c, []string{"grpc", "client"})
+}
+
+func Main(c *cmd.Command, args []string) error {
+	in, err := filepath.Abs(viper.GetString("input"))
+	if err != nil {
+		return errors.Annotate(err, "input")
+	}
+	out, err := filepath.Abs(viper.GetString("output"))
+	if err != nil {
+		return errors.Annotate(err, "output")
+	}
+	ProtoSuffix = viper.GetString("protobuf-suffix")
+	suffix := viper.GetString("template-suffix")
+	pbFiles := viper.GetString("protobuf-files")
+	return generate(in, out, pbFiles, suffix, args[0], strings.Join(args, "."))
 }

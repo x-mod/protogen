@@ -5,12 +5,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/liujianping/protogen/tpl"
+	"code.subscriber.one/subscriber/protogen/tpl"
 	"github.com/spf13/afero"
 	"github.com/x-mod/errors"
 )
 
-func GetTemplate(prefix string) (*template.Template, error) {
+func getTemplate(prefix string) (*template.Template, error) {
 	t := template.New("protogen")
 	for _, name := range tpl.AssetNames() {
 		if strings.HasPrefix(name, prefix) {
@@ -27,7 +27,7 @@ func GetTemplate(prefix string) (*template.Template, error) {
 	return t, nil
 }
 
-func CopyTemplateExcludeSuffix(prefix string, suffix string, destDir string, force bool) error {
+func copyFilesExcludeSuffix(prefix string, suffix string, destDir string, force bool) error {
 	fs := afero.NewOsFs()
 	for _, name := range tpl.AssetNames() {
 		if strings.HasPrefix(name, prefix) {

@@ -1,7 +1,6 @@
-{{define "http.server"}}
+{{define "http.server" -}}
 {{- $obj := . -}}
-
-{{range $service := $obj.Services -}}
+{{- range $service := $obj.Services}}
 func Register{{$service.Name}}HTTPServer(s *server.HTTPServer, srv {{$service.Name}}Server) error {
 	return s.RegisterService(&_{{$service.Name}}_HTTP_serviceDesc, srv)
 }
@@ -60,7 +59,7 @@ func _{{$service.Name}}_{{$method.Name}}_HTTP_Handler(srv interface{}, ctx conte
 	}
 	server.PBResponse(wr, out, err)
 }
-{{- end}}
+{{end -}}
 {{- end}} 
 {{end -}}
 

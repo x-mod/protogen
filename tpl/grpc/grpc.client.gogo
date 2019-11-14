@@ -1,0 +1,41 @@
+{{define "grpc.client" -}}{{- $obj := . -}}
+package {{$obj.Package.Name}}
+
+import (
+    "fmt"
+    "strings"
+    
+    pb "{{$obj.ImportPb}}"
+    "google.golang.org/grpc"
+)
+
+{{- range $service := $obj.Services}}
+func {{$service.Name}}GrpcName() string {
+    return strings.Join([]string{strings.ToLower("{{$obj.Package.Name}}"), strings.ToLower("{{$service.Name}}")}, "-")
+}
+func {{$service.Name}}GrpcPort() int {
+    return 8080
+}
+func {{$service.Name}}GrpcAddr() string {
+    return fmt.Sprintf("%s:%d", {{$service.Name}}GrpcName(), {{$service.Name}}GrpcPort())
+}
+type {{$service.Name}}GrpcClient struct{
+    pb.{{$service.Name}}Client
+}
+
+func New{{$service.Name}}GrpcClient(addr string, opts ...grpc.DialOption) (*{{$service.Name}}GrpcClient, error) {
+    ropt := []grpc.DialOption{}
+    if len(opts) == 0 {
+        ropt = append(ropt, grpc.WithInsecure())
+    }
+    ropt = append(ropt, opts...)
+    conn, err := grpc.Dial(addr, ropt...)
+	if err != nil {
+		return nil, err
+	}
+    return &{{$service.Name}}GrpcClient{
+        {{$service.Name}}Client: pb.New{{$service.Name}}Client(conn),
+    }, nil
+}
+{{- end}}
+{{end -}}

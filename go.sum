@@ -69,6 +69,7 @@ github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFB
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/liujianping/protogen v0.0.0-20190821145548-015b832c85be h1:MRvrVnWVdgEmoG5l399ws7nFG4Bd3xOFW2ckcJjtQb4=
 github.com/magiconair/properties v1.8.0 h1:LLgXmsheXeRoUOBOjtwPQCWIYqM/LU1ayDtDePerRcY=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
@@ -131,6 +132,8 @@ github.com/x-mod/build v0.1.0 h1:TO97cz2s53qst72D2v8HbanJUUmTZNXD84MrEuy9/2g=
 github.com/x-mod/build v0.1.0/go.mod h1:wMSwoPKeFEDVXt7mMw9ORZ/YaZOS1icgoXNh0GCdMWQ=
 github.com/x-mod/cmd v0.0.1 h1:T+2IsTmbWyyOUv3kqcP84pAr5u6c2DzR4fzUTdXNqDY=
 github.com/x-mod/cmd v0.0.1/go.mod h1:HSitBhBvjeumLcu8Nfu9H1XtWOYKcrav2EX0oLVtG2k=
+github.com/x-mod/cmd v0.2.2 h1:O//Fk9rQ7U982p3YiC5J/PAmIfynyx82IDoARPEHRPQ=
+github.com/x-mod/cmd v0.2.2/go.mod h1:03KyRyzD554luSMG10tD1tmaVg5UF+wKWgrY4AtrjK0=
 github.com/x-mod/cronexpr v1.0.0/go.mod h1:p2v5cgbUf0RY9jS/KOriOiKIGxEdHRqPOkFxOFvmLco=
 github.com/x-mod/errors v0.1.0/go.mod h1:d+HrEt85NDHN0I4yJ9pQjy1JZEhPsSNou3sIFu5vXOk=
 github.com/x-mod/errors v0.1.2/go.mod h1:d+HrEt85NDHN0I4yJ9pQjy1JZEhPsSNou3sIFu5vXOk=
