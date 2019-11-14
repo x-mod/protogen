@@ -15,6 +15,11 @@ service Demo {
             uri: "/v1/example/hello",
         };
     };
+    rpc Greet(HelloReq) returns (HelloResp) {
+        option (options.http) = {
+            method: "get",           
+        };
+    };
 }
 
 message HelloReq{

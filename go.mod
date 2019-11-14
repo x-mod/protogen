@@ -11,7 +11,7 @@ require (
 	github.com/x-mod/cmd v0.2.2
 	github.com/x-mod/errors v0.1.6
 	github.com/x-mod/httpclient v0.3.0
-	github.com/x-mod/httpserver v0.1.0
+	github.com/x-mod/httpserver v0.4.1
 	github.com/x-mod/options v0.1.0
 	google.golang.org/grpc v1.21.0
 )

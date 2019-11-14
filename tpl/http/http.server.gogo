@@ -1,65 +1,84 @@
-{{define "http.server" -}}
-{{- $obj := . -}}
+{{define "http.server" -}}{{- $obj := . -}}
+package {{$obj.Package.Name}}
+
+import (
+    "context"
+	"net/http"
+
+	pb "{{$obj.ImportPb}}"
+	"github.com/x-mod/httpserver"
+	"github.com/x-mod/httpserver/grpc"
+)
+
 {{- range $service := $obj.Services}}
-func Register{{$service.Name}}HTTPServer(s *server.HTTPServer, srv {{$service.Name}}Server) error {
-	return s.RegisterService(&_{{$service.Name}}_HTTP_serviceDesc, srv)
+{{- $version := "v0" -}}
+{{range $sopt := $service.Options -}}
+{{- if eq $sopt.Name "(options.service)" -}}
+    {{- range $k, $v := $sopt.Constant.Map}}
+        {{- if eq $k "version"}}
+        {{- $version = $v.Source -}}
+        {{end -}}
+    {{end -}}
+{{- end -}}
+{{- end}}
+
+type {{$service.Name}}HTTPService struct{
+    rctx    context.Context
+    server  *httpserver.Server
+	service pb.{{$service.Name}}Server
 }
 
-var _{{$service.Name}}_HTTP_serviceDesc = server.ServiceDescription{
-	PackageName:  "{{$obj.Package.Name}}",
-	ServiceName:  "{{$service.Name}}",
-	Implemention: (*{{$service.Name}}Server)(nil),
-    {{range $sopt := $service.Options -}}
-        {{- if eq $sopt.Name "(options.service)" -}}
-            Option: &options.ServiceOption{
-                {{- range $k, $v := $sopt.Constant.Map}}
-                    {{- if eq $k "version"}}
-                    Version: "{{$v.Source}}",
-                    {{end -}}
-                {{end -}}
-            },
+func New{{$service.Name}}HTTPService(server *httpserver.Server, service pb.{{$service.Name}}Server) *{{$service.Name}}HTTPService {
+    return &{{$service.Name}}HTTPService{server: server, service: service}
+}
+
+func (svc *{{$service.Name}}HTTPService) Serve(ctx context.Context) error {
+    {{range $method := $service.Methods}}
+        {{- $httpmethod := "post" -}}
+        {{- $uri := "" -}}
+        {{- range $option := $method.Options -}}
+            {{- if eq $option.Name "(options.http)" -}}
+                {{- range $k, $v := $option.Constant.Map -}}
+                    {{- if eq $k "method"}}
+                    {{- $httpmethod = $v.Source -}}
+                    {{- end -}}
+                    {{- if eq $k "uri"}}
+                    {{- $uri = $v.Source -}}
+                    {{- end -}}
+                {{- end}}
+            {{- end -}}
         {{- end -}}
-    {{- end}}
-	Methods: []server.MethodDescription{
-        {{range $method := $service.Methods -}}
-		{
-			MethodName: "{{$method.Name}}",
-			Handler:    _{{$service.Name}}_{{$method.Name}}_HTTP_Handler,
-            {{range $option := $method.Options -}}
-                {{- if eq $option.Name "(options.http)" -}}
-                Option: &options.HttpOption{
-                    {{- range $k, $v := $option.Constant.Map -}}
-                        {{- if eq $k "method"}}
-                        Method: "{{$v.Source}}",
-                        {{- end -}}
-                        {{- if eq $k "uri"}}
-                        Uri: "{{$v.Source}}",
-                        {{- end -}}
-                    {{- end}}
-                },                        
-                {{- end -}}
+        svc.server.Route(
+            httpserver.Method("{{$httpmethod}}"),
+            {{if eq $uri "" -}}
+            httpserver.Pattern(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
+            {{- else -}}
+            httpserver.Pattern("{{$uri}}"),
             {{- end}}
-		},                
-        {{- end}}
-	},
+            httpserver.Handler(svc.{{$method.Name}}),
+        )
+    {{end}}
+    svc.rctx = ctx
+    return svc.server.Serve(ctx)
 }
 
-{{range $method := $service.Methods -}}
-func _{{$service.Name}}_{{$method.Name}}_HTTP_Handler(srv interface{}, ctx context.Context, wr http.ResponseWriter, req *http.Request) {
-	in := new({{$method.RequestType}})
-	err := server.PBRequest(req, in)
+func (svc *{{$service.Name}}HTTPService) Stop() {
+    svc.server.Shutdown(svc.rctx)
+}
+
+{{range $method := $service.Methods}}
+func (svc *{{$service.Name}}HTTPService) {{$method.Name}}(ctx context.Context, wr http.ResponseWriter, req *http.Request) {
+	in := new(pb.{{$method.RequestType}})
+	err := grpc.PBRequest(req, in)
 	if err != nil {
-		server.PBResponse(wr, nil, err)
+		grpc.PBResponse(wr, nil, err)
 		return
 	}
-	out, err := srv.({{$service.Name}}Server).{{$method.Name}}(server.PBContext(req, ctx), in)
-	if err != nil {
-		server.PBResponse(wr, nil, err)
-		return
-	}
-	server.PBResponse(wr, out, err)
+	out, err := svc.service.{{$method.Name}}(grpc.PBContext(req, ctx), in)
+	grpc.PBResponse(wr, out, err)
 }
 {{end -}}
-{{- end}} 
+
+{{- end}}
 {{end -}}
 
