@@ -22,17 +22,17 @@ import (
 {{- end -}}
 {{- end}}
 
-type {{$service.Name}}HTTPService struct{
+type {{$service.Name}}HTTPServer struct{
     rctx    context.Context
     server  *httpserver.Server
 	service pb.{{$service.Name}}Server
 }
 
-func New{{$service.Name}}HTTPService(server *httpserver.Server, service pb.{{$service.Name}}Server) *{{$service.Name}}HTTPService {
-    return &{{$service.Name}}HTTPService{server: server, service: service}
+func New{{$service.Name}}HTTPServer(server *httpserver.Server, service pb.{{$service.Name}}Server) *{{$service.Name}}HTTPServer {
+    return &{{$service.Name}}HTTPServer{server: server, service: service}
 }
 
-func (svc *{{$service.Name}}HTTPService) Serve(ctx context.Context) error {
+func (svc *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
     {{range $method := $service.Methods}}
         {{- $httpmethod := "post" -}}
         {{- $uri := "" -}}
@@ -62,12 +62,12 @@ func (svc *{{$service.Name}}HTTPService) Serve(ctx context.Context) error {
     return svc.server.Serve(ctx)
 }
 
-func (svc *{{$service.Name}}HTTPService) Stop() {
+func (svc *{{$service.Name}}HTTPServer) Stop() {
     svc.server.Shutdown(svc.rctx)
 }
 
 {{range $method := $service.Methods}}
-func (svc *{{$service.Name}}HTTPService) {{$method.Name}}(ctx context.Context, wr http.ResponseWriter, req *http.Request) {
+func (svc *{{$service.Name}}HTTPServer) {{$method.Name}}(ctx context.Context, wr http.ResponseWriter, req *http.Request) {
 	in := new(pb.{{$method.RequestType}})
 	err := grpc.PBRequest(req, in)
 	if err != nil {

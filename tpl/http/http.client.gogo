@@ -4,8 +4,10 @@ package {{$obj.Package.Name}}
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"strings"
 
-	pb "code.subscriber.one/subscriber/sendmail/pb/sendmail/v1"
+	pb "{{$obj.ImportPb}}"
 	"github.com/x-mod/httpclient"
 	"github.com/x-mod/httpclient/grpc"
 )
@@ -22,24 +24,34 @@ import (
 {{- end -}}
 {{- end}}
 
+func {{$service.Name}}HTTPName() string {
+    return strings.Join([]string{strings.ToLower("{{$obj.Package.Name}}"), strings.ToLower("{{$service.Name}}")}, "-")
+}
+func {{$service.Name}}HTTPPort() int {
+    return 8080
+}
+func {{$service.Name}}HTTPAddr() string {
+    return fmt.Sprintf("%s:%d", {{$service.Name}}HTTPName(), {{$service.Name}}HTTPPort())
+}
+
 type {{$service.Name}}HTTPClient struct {
 	addr       string
-	schema     string
-	credential *tls.Config
+	scheme     string
+	tls 	   *tls.Config
 	client     *httpclient.Client
 }
 
 type {{$service.Name}}HTTPClientOpt func(*{{$service.Name}}HTTPClient)
 
-func TLSConfig(credential *tls.Config) {{$service.Name}}HTTPClientOpt {
+func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
-		c.credential = credential
+		c.tls = tls
 	}
 }
 
-func Schema(schema string) {{$service.Name}}HTTPClientOpt {
+func Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
-		c.schema = schema
+		c.scheme = scheme
 	}
 }
 
@@ -49,16 +61,19 @@ func Client(client *httpclient.Client) {{$service.Name}}HTTPClientOpt {
 	}
 }
 
-func New{{$service.Name}}HTTPClient(addr string, opts ...{{$service.Name}}HTTPClientOpt) *{{$service.Name}}HTTPClient {
-	c := &{{$service.Name}}HTTPClient{schema: "http", addr: addr}
+func New{{$service.Name}}HTTPClient(opts ...{{$service.Name}}HTTPClientOpt) *{{$service.Name}}HTTPClient {
+	c := &{{$service.Name}}HTTPClient{
+		scheme: "http", 
+		addr: {{$service.Name}}HTTPAddr(),
+	}
 	for _, opt := range opts {
 		opt(c)
 	}
-	if c.credential != nil {
-		c.schema = "https"
+	if c.tls != nil {
+		c.scheme = "https"
 	}
 	if c.client == nil {
-		c.client = httpclient.New(httpclient.TLSConfig(c.credential))
+		c.client = httpclient.New(httpclient.TLSConfig(c.tls))
 	}
 	return c
 }
@@ -82,7 +97,7 @@ func (c *{{$service.Name}}HTTPClient) {{$method.Name}}(ctx context.Context, in *
 	req, err := httpclient.MakeRequest(
 		httpclient.Method("{{$httpmethod}}"),
 		httpclient.URL(
-			httpclient.Schema(c.schema),
+			httpclient.Scheme(c.scheme),
 			httpclient.Host(c.addr),
             {{if eq $uri "" -}}
             httpclient.URI(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),

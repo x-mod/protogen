@@ -169,6 +169,10 @@ func generate(in string, out string, pb string, suffix string, prefix string, ob
 
 func init() {
 	cmd.Add(
+		cmd.Path("/http"),
+		cmd.Short("generate http files from protobuf"),
+	)
+	cmd.Add(
 		cmd.Path("/http/server"),
 		cmd.Short("generate http server files from protobuf"),
 		cmd.Main(HttpServer),
@@ -179,6 +183,10 @@ func init() {
 		cmd.Main(HttpClient),
 	)
 	cmd.Add(
+		cmd.Path("/grpc"),
+		cmd.Short("generate grpc files from protobuf"),
+	)
+	cmd.Add(
 		cmd.Path("/grpc/server"),
 		cmd.Short("generate grpc server files from protobuf"),
 		cmd.Main(GrpcServer),
@@ -187,6 +195,11 @@ func init() {
 		cmd.Path("/grpc/client"),
 		cmd.Short("generate grpc client files from protobuf"),
 		cmd.Main(GrpcClient),
+	)
+	cmd.Add(
+		cmd.Path("/service"),
+		cmd.Short("generate empty service files from protobuf"),
+		cmd.Main(EmptyService),
 	)
 }
 
@@ -201,6 +214,9 @@ func GrpcServer(c *cmd.Command, args []string) error {
 }
 func GrpcClient(c *cmd.Command, args []string) error {
 	return Main(c, []string{"grpc", "client"})
+}
+func EmptyService(c *cmd.Command, args []string) error {
+	return Main(c, []string{"service"})
 }
 
 func Main(c *cmd.Command, args []string) error {

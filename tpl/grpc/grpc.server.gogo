@@ -2,47 +2,78 @@
 package {{$obj.Package.Name}}
 
 import (
-    "context"
-	"log"
+	"context"
+	"crypto/tls"
+	"fmt"
 	"net"
-    
-    pb "{{$obj.ImportPb}}"
-    "google.golang.org/grpc"
-    "github.com/x-mod/errors"
+
+	pb "{{$obj.ImportPb}}"
+	"github.com/x-mod/glog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 {{- range $service := $obj.Services}}
-type {{$service.Name}}GrpcService struct{
+type {{$service.Name}}GrpcServer struct{
     addr string
-	gsrv *grpc.Server
+	tls  *tls.Config
+	gserver *grpc.Server
+	service pb.{{$service.Name}}Server
 }
 
-func New{{$service.Name}}GrpcService(addr string, opts ...grpc.ServerOption) *{{$service.Name}}GrpcService {
-	service := &{{$service.Name}}GrpcService{addr: addr}
-    gserver := grpc.NewServer(opts...)
-    service.gsrv = gserver
-    return service
+type {{$service.Name}}GrpcServerOption func(*{{$service.Name}}GrpcServer)
+
+func Address(addr string) {{$service.Name}}GrpcServerOption {
+	return func(svc *{{$service.Name}}GrpcServer) {
+		svc.addr = addr
+	}
 }
 
-func (svc *{{$service.Name}}GrpcService) Serve(ctx context.Context) error {
-    pb.Register{{$service.Name}}Server(svc.gsrv, svc)
-    ln, err := net.Listen("tcp", svc.addr)
+func TLSConfig(tls *tls.Config) {{$service.Name}}GrpcServerOption {
+	return func(svc *{{$service.Name}}GrpcServer) {
+		svc.tls = tls
+	}
+}
+
+func Service(service pb.{{$service.Name}}Server) {{$service.Name}}GrpcServerOption {
+	return func(svc *{{$service.Name}}GrpcServer) {
+		svc.service = service
+	}
+}
+
+func New{{$service.Name}}GrpcServer(opts ...{{$service.Name}}GrpcServerOption) *{{$service.Name}}GrpcServer {
+	server := &{{$service.Name}}GrpcServer{
+		addr: ":7080",
+	}
+	for _, opt := range opts {
+		opt(server)
+	}
+	gopts := []grpc.ServerOption{}
+	if server.tls != nil {
+		gopts = append(gopts, grpc.Creds(credentials.NewTLS(server.tls)))
+	}
+    server.gserver = grpc.NewServer(gopts...)	
+    return server
+}
+
+func (srv *{{$service.Name}}GrpcServer) Serve(ctx context.Context) error {
+    if srv.service ==  nil {
+		return fmt.Errorf("{{$service.Name}} implemention required")
+	}
+	pb.Register{{$service.Name}}Server(srv.gserver, srv.service)
+    ln, err := net.Listen("tcp", srv.addr)
 	if err != nil {
 		return err
 	}
-	log.Println("service ({{$service.Name}}) serving at ", svc.addr)
-	return svc.gsrv.Serve(ln)
+
+	glog.V(2).Infoln("grpc server ({{$service.Name}}) serving at ", srv.addr)
+	return srv.gserver.Serve(ln)
 }
 
-func (svc *{{$service.Name}}GrpcService) Stop() {
-	svc.gsrv.Stop()
+func (srv *{{$service.Name}}GrpcServer) Stop() {
+	srv.gserver.Stop()
+	glog.V(2).Infoln("grpc server ({{$service.Name}}) stopped")
 }
-
-{{range $method := $service.Methods -}}
-func (svc *{{$service.Name}}GrpcService) {{$method.Name}}(ctx context.Context, req *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
-	return nil, errors.New("{{$method.Name}} unimplemented")
-}
-{{end -}}
 
 {{- end}}
 {{end -}}

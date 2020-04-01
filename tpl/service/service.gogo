@@ -1,0 +1,23 @@
+{{define "service" -}}{{- $obj := . -}}
+package {{$obj.Package.Name}}
+
+import (
+    "context"
+	"fmt"
+    
+    pb "{{$obj.ImportPb}}"
+)
+
+{{- range $service := $obj.Services}}
+type {{$service.Name}}Service struct{
+}
+
+{{range $method := $service.Methods -}}
+func (svc *{{$service.Name}}Service) {{$method.Name}}(ctx context.Context, req *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
+	return nil, fmt.Errorf("{{$method.Name}} unimplemented")
+}
+{{end -}}
+
+{{- end}}
+{{end -}}
+

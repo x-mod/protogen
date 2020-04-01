@@ -2,11 +2,13 @@
 package {{$obj.Package.Name}}
 
 import (
-    "fmt"
-    "strings"
-    
-    pb "{{$obj.ImportPb}}"
-    "google.golang.org/grpc"
+    "crypto/tls"
+	"fmt"
+	"strings"
+
+	pb "{{$obj.ImportPb}}"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 {{- range $service := $obj.Services}}
@@ -14,28 +16,53 @@ func {{$service.Name}}GrpcName() string {
     return strings.Join([]string{strings.ToLower("{{$obj.Package.Name}}"), strings.ToLower("{{$service.Name}}")}, "-")
 }
 func {{$service.Name}}GrpcPort() int {
-    return 8080
+    return 7080
 }
 func {{$service.Name}}GrpcAddr() string {
     return fmt.Sprintf("%s:%d", {{$service.Name}}GrpcName(), {{$service.Name}}GrpcPort())
 }
+
 type {{$service.Name}}GrpcClient struct{
+    addr string
+    tls  *tls.Config
     pb.{{$service.Name}}Client
 }
 
-func New{{$service.Name}}GrpcClient(addr string, opts ...grpc.DialOption) (*{{$service.Name}}GrpcClient, error) {
-    ropt := []grpc.DialOption{}
-    if len(opts) == 0 {
-        ropt = append(ropt, grpc.WithInsecure())
+type {{$service.Name}}GrpcClientOption func(*{{$service.Name}}GrpcClient)
+
+func Address(addr string) {{$service.Name}}GrpcClientOption {
+    return func(c *{{$service.Name}}GrpcClient){
+        c.addr = addr
     }
-    ropt = append(ropt, opts...)
-    conn, err := grpc.Dial(addr, ropt...)
+}
+
+func TLSConfig(tls *tls.Config) {{$service.Name}}GrpcClientOption {
+    return func(c *{{$service.Name}}GrpcClient){
+        c.tls = tls
+    }
+}
+
+func New{{$service.Name}}GrpcClient(opts ...{{$service.Name}}GrpcClientOption) (*{{$service.Name}}GrpcClient, error) {
+    c := &{{$service.Name}}GrpcClient{
+        addr: {{$service.Name}}GrpcAddr(),
+    }
+    for _, opt := range opts {
+        opt(c)
+    }
+
+    gopts := []grpc.DialOption{}
+    if c.tls != nil {
+        gopts = append(gopts, grpc.WithTransportCredentials(credentials.NewTLS(c.tls)))
+    } else {
+        gopts = append(gopts, grpc.WithInsecure())
+    }
+   
+    conn, err := grpc.Dial(c.addr, gopts...)
 	if err != nil {
 		return nil, err
 	}
-    return &{{$service.Name}}GrpcClient{
-        {{$service.Name}}Client: pb.New{{$service.Name}}Client(conn),
-    }, nil
+    c.{{$service.Name}}Client = pb.New{{$service.Name}}Client(conn)
+    return c, nil
 }
 {{- end}}
 {{end -}}
