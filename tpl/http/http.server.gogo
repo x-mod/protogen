@@ -3,7 +3,8 @@ package {{$obj.Package.Name}}
 
 import (
     "context"
-	"net/http"
+    "crypto/tls"
+	"net/http"	
 
 	pb "{{$obj.ImportPb}}"
 	"github.com/x-mod/httpserver"
@@ -23,16 +24,51 @@ import (
 {{- end}}
 
 type {{$service.Name}}HTTPServer struct{
-    rctx    context.Context
-    server  *httpserver.Server
+    addr    string
+    tls     *tls.Config
+    hserver  *httpserver.Server
 	service pb.{{$service.Name}}Server
 }
 
-func New{{$service.Name}}HTTPServer(server *httpserver.Server, service pb.{{$service.Name}}Server) *{{$service.Name}}HTTPServer {
-    return &{{$service.Name}}HTTPServer{server: server, service: service}
+type {{$service.Name}}HTTPServerOption func(*{{$service.Name}}HTTPServer)
+
+func Address(addr string) {{$service.Name}}HTTPServerOption {
+    return func(srv *{{$service.Name}}HTTPServer) {
+        srv.addr = addr
+    }
 }
 
-func (svc *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
+func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPServerOption {
+    return func(srv *{{$service.Name}}HTTPServer) {
+        srv.tls = tls
+    }
+}
+
+func Service(service pb.{{$service.Name}}Server) {{$service.Name}}HTTPServerOption {
+	return func(srv *{{$service.Name}}HTTPServer) {
+		srv.service = service
+	}
+}
+
+func New{{$service.Name}}HTTPServer(opts ...{{$service.Name}}HTTPServerOption) *{{$service.Name}}HTTPServer {
+    server := &{{$service.Name}}HTTPServer{
+		addr: ":8080",
+	}
+	for _, opt := range opts {
+		opt(server)
+	}
+	hopts := []httpserver.ServerOpt{
+        httpserver.Name("{{$service.Name}}"),
+        httpserver.Address(server.addr),
+    }
+    if server.tls != nil {
+        hopts = append(hopts, httpserver.TLSConfig(server.tls))
+    }
+    server.hserver = httpserver.New(hopts...)	
+    return server
+}
+
+func (srv *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
     {{range $method := $service.Methods}}
         {{- $httpmethod := "post" -}}
         {{- $uri := "" -}}
@@ -48,33 +84,32 @@ func (svc *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
                 {{- end}}
             {{- end -}}
         {{- end -}}
-        svc.server.Route(
+        srv.hserver.Route(
             httpserver.Method("{{$httpmethod}}"),
             {{if eq $uri "" -}}
             httpserver.Pattern(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
             {{- else -}}
             httpserver.Pattern("{{$uri}}"),
             {{- end}}
-            httpserver.Handler(svc.{{$method.Name}}),
+            httpserver.Handler(http.HandlerFunc(srv.{{$method.Name}})),
         )
     {{end}}
-    svc.rctx = ctx
-    return svc.server.Serve(ctx)
+    return srv.hserver.Serve(ctx)
 }
 
-func (svc *{{$service.Name}}HTTPServer) Stop() {
-    svc.server.Shutdown(svc.rctx)
+func (srv *{{$service.Name}}HTTPServer) Stop() {
+    srv.hserver.Close()
 }
 
 {{range $method := $service.Methods}}
-func (svc *{{$service.Name}}HTTPServer) {{$method.Name}}(ctx context.Context, wr http.ResponseWriter, req *http.Request) {
+func (srv *{{$service.Name}}HTTPServer) {{$method.Name}}(wr http.ResponseWriter, req *http.Request) {
 	in := new(pb.{{$method.RequestType}})
 	err := grpc.PBRequest(req, in)
 	if err != nil {
 		grpc.PBResponse(wr, nil, err)
 		return
 	}
-	out, err := svc.service.{{$method.Name}}(grpc.PBContext(req, ctx), in)
+	out, err := srv.service.{{$method.Name}}(req.Context(), in)
 	grpc.PBResponse(wr, out, err)
 }
 {{end -}}
