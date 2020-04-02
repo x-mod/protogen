@@ -58,7 +58,7 @@ func New{{$service.Name}}HTTPServer(opts ...{{$service.Name}}HTTPServerOption) *
 		opt(server)
 	}
 	hopts := []httpserver.ServerOpt{
-        httpserver.Name("{{$service.Name}}"),
+        httpserver.Name("http server ({{$service.Name}})"),
         httpserver.Address(server.addr),
     }
     if server.tls != nil {
