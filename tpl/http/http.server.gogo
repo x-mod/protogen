@@ -2,7 +2,6 @@
 package {{$obj.Package.Name}}
 
 import (
-    "context"
     "crypto/tls"
 	"net/http"	
 
@@ -25,11 +24,11 @@ import (
 {{- end}}
 
 type {{$service.Name}}HTTPServer struct{
+    *httpserver.Server
     addr     string
     pingURI  string
     tls      *tls.Config    
-    hserver  *httpserver.Server
-	service pb.{{$service.Name}}Server
+    service pb.{{$service.Name}}Server
 }
 
 type {{$service.Name}}HTTPServerOption func(*{{$service.Name}}HTTPServer)
@@ -72,11 +71,7 @@ func New{{$service.Name}}HTTPServer(opts ...{{$service.Name}}HTTPServerOption) *
     if server.tls != nil {
         hopts = append(hopts, httpserver.TLSConfig(server.tls))
     }
-    server.hserver = httpserver.New(hopts...)	
-    return server
-}
-
-func (srv *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
+    server.Server = httpserver.New(hopts...)	
     {{range $method := $service.Methods}}
         {{- $httpmethod := "post" -}}
         {{- $uri := "" -}}
@@ -92,27 +87,23 @@ func (srv *{{$service.Name}}HTTPServer) Serve(ctx context.Context) error {
                 {{- end}}
             {{- end -}}
         {{- end -}}
-        srv.hserver.Route(
+        server.Server.Route(
             httpserver.Method("{{$httpmethod}}"),
             {{if eq $uri "" -}}
             httpserver.Pattern(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
             {{- else -}}
             httpserver.Pattern("{{$uri}}"),
             {{- end}}
-            httpserver.Handler(http.HandlerFunc(srv.{{$method.Name}})),
+            httpserver.Handler(http.HandlerFunc(server.{{$method.Name}})),
         )
     {{end}}
-    if len(srv.pingURI) != 0 {
-        srv.hserver.Route(
-            httpserver.Pattern(srv.pingURI),
-            httpserver.Handler(http.HandlerFunc(srv.ping)),
+    if len(server.pingURI) != 0 {
+        server.Server.Route(
+            httpserver.Pattern(server.pingURI),
+            httpserver.Handler(http.HandlerFunc(server.ping)),
         )
-    }    
-    return srv.hserver.Serve(ctx)
-}
-
-func (srv *{{$service.Name}}HTTPServer) Stop() {
-    srv.hserver.Close()
+    }  
+    return server
 }
 
 {{range $method := $service.Methods}}

@@ -70,9 +70,9 @@ func (srv *{{$service.Name}}GrpcServer) Serve(ctx context.Context) error {
 	return srv.gserver.Serve(ln)
 }
 
-func (srv *{{$service.Name}}GrpcServer) Stop() {
+func (srv *{{$service.Name}}GrpcServer) Close() {
 	srv.gserver.Stop()
-	glog.V(2).Infoln("grpc server ({{$service.Name}}) stopped")
+	glog.V(2).Infoln("grpc server ({{$service.Name}}) closed.")
 }
 
 {{- end}}
