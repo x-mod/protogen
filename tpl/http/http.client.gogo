@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
+	"time"
 
 	pb "{{$obj.ImportPb}}"
 	"github.com/x-mod/httpclient"
@@ -37,6 +38,8 @@ func {{$service.Name}}HTTPAddr() string {
 type {{$service.Name}}HTTPClient struct {
 	addr       string
 	scheme     string
+	token      string
+	expireAt   int64
 	tls 	   *tls.Config
 	client     *httpclient.Client
 }
@@ -52,6 +55,13 @@ func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPClientOpt {
 func Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.scheme = scheme
+	}
+}
+
+func Token(token string, expireAt int64) {{$service.Name}}HTTPClientOpt {
+	return func(c *{{$service.Name}}HTTPClient) {
+		c.token = token
+		c.expireAt = expireAt
 	}
 }
 
@@ -94,21 +104,25 @@ func New{{$service.Name}}HTTPClient(opts ...{{$service.Name}}HTTPClientOpt) *{{$
         {{- end -}}
     {{- end -}}
 func (c *{{$service.Name}}HTTPClient) {{$method.Name}}(ctx context.Context, in *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
-	req, err := httpclient.MakeRequest(
+	opts := []httpclient.ReqOpt{
 		httpclient.Method("{{$httpmethod}}"),
 		httpclient.URL(
 			httpclient.Scheme(c.scheme),
 			httpclient.Host(c.addr),
-            {{if eq $uri "" -}}
-            httpclient.URI(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
-            {{- else -}}
-            httpclient.URI("{{$uri}}"),
-            {{- end}}
+			{{if eq $uri "" -}}
+			httpclient.URI(grpc.URIFormat("{{$version}}", "{{$obj.Package.Name}}", "{{$service.Name}}", "{{$method.Name}}")),
+			{{- else -}}
+			httpclient.URI("{{$uri}}"),
+			{{- end}}
 		),
 		httpclient.Content(
 			httpclient.PBJSON(in),
 		),
-	)
+	}
+	if time.Now().Unix() < c.expireAt && len(c.token) > 0 {
+		opts = append(opts, httpclient.Query("token", c.token))
+	}
+	req, err := httpclient.MakeRequest(opts...)
 	if err != nil {
 		return nil, err
 	}

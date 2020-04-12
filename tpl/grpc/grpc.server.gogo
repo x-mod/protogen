@@ -43,7 +43,7 @@ func Service(service pb.{{$service.Name}}Server) {{$service.Name}}GrpcServerOpti
 
 func New{{$service.Name}}GrpcServer(opts ...{{$service.Name}}GrpcServerOption) *{{$service.Name}}GrpcServer {
 	server := &{{$service.Name}}GrpcServer{
-		addr: ":7080",
+		addr: ":8080",
 	}
 	for _, opt := range opts {
 		opt(server)

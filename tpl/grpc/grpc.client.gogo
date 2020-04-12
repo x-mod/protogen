@@ -16,7 +16,7 @@ func {{$service.Name}}GrpcName() string {
     return strings.Join([]string{strings.ToLower("{{$obj.Package.Name}}"), strings.ToLower("{{$service.Name}}")}, "-")
 }
 func {{$service.Name}}GrpcPort() int {
-    return 7080
+    return 8080
 }
 func {{$service.Name}}GrpcAddr() string {
     return fmt.Sprintf("%s:%d", {{$service.Name}}GrpcName(), {{$service.Name}}GrpcPort())

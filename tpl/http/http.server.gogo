@@ -28,7 +28,7 @@ type {{$service.Name}}HTTPServer struct{
     addr     string
     pingURI  string
     tls      *tls.Config    
-    service pb.{{$service.Name}}Server
+    service  pb.{{$service.Name}}Server
 }
 
 type {{$service.Name}}HTTPServerOption func(*{{$service.Name}}HTTPServer)
@@ -114,7 +114,7 @@ func (srv *{{$service.Name}}HTTPServer) {{$method.Name}}(wr http.ResponseWriter,
 		grpc.PBResponse(wr, nil, err)
 		return
 	}
-	out, err := srv.service.{{$method.Name}}(req.Context(), in)
+	out, err := srv.service.{{$method.Name}}(grpc.PBContext(req, nil), in)
 	grpc.PBResponse(wr, out, err)
 }
 {{end -}}
