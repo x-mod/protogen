@@ -35,12 +35,13 @@ func {{$service.Name}}HTTPAddr() string {
     return fmt.Sprintf("%s:%d", {{$service.Name}}HTTPName(), {{$service.Name}}HTTPPort())
 }
 
+type TokenFunc func() string
+
 type {{$service.Name}}HTTPClient struct {
 	addr       string
 	scheme     string
-	token      string
-	expireAt   int64
 	tls 	   *tls.Config
+	tokenFunc  TokenFunc
 	client     *httpclient.Client
 }
 
@@ -58,10 +59,9 @@ func Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
 	}
 }
 
-func Token(token string, expireAt int64) {{$service.Name}}HTTPClientOpt {
+func BearerAuth(token TokenFunc) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
-		c.token = token
-		c.expireAt = expireAt
+		c.tokenFunc = token
 	}
 }
 
@@ -119,8 +119,8 @@ func (c *{{$service.Name}}HTTPClient) {{$method.Name}}(ctx context.Context, in *
 			httpclient.PBJSON(in),
 		),
 	}
-	if time.Now().Unix() < c.expireAt && len(c.token) > 0 {
-		opts = append(opts, httpclient.Query("token", c.token))
+	if c.tokenFunc != nil {
+		opts = append(opts, httpclient.BearerAuthFunc(c.tokenFunc))
 	}
 	req, err := httpclient.MakeRequest(opts...)
 	if err != nil {
