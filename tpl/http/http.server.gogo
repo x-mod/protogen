@@ -3,6 +3,7 @@ package {{$obj.Package.Name}}
 
 import (
     "crypto/tls"
+    "fmt"
 	"net/http"	
 
 	pb "{{$obj.ImportPb}}"
@@ -111,11 +112,15 @@ func (srv *{{$service.Name}}HTTPServer) {{$method.Name}}(wr http.ResponseWriter,
 	in := new(pb.{{$method.RequestType}})
 	err := grpc.PBRequest(req, in)
 	if err != nil {
-		grpc.PBResponse(wr, nil, err)
+		grpc.PBResponse(wr, nil, fmt.Errorf("%s: %w", req.RequestURI, err))
 		return
 	}
 	out, err := srv.service.{{$method.Name}}(grpc.PBContext(req, nil), in)
-	grpc.PBResponse(wr, out, err)
+    if err != nil {
+        grpc.PBResponse(wr, nil, fmt.Errorf("%s: %w", req.RequestURI, err))
+		return
+    }
+	grpc.PBResponse(wr, out, nil)
 }
 {{end -}}
 

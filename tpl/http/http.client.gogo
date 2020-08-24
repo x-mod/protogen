@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
-	"time"
 
 	pb "{{$obj.ImportPb}}"
 	"github.com/x-mod/httpclient"
@@ -56,6 +55,12 @@ func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPClientOpt {
 func Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.scheme = scheme
+	}
+}
+
+func Address(addr string) {{$service.Name}}HTTPClientOpt {
+	return func(c *{{$service.Name}}HTTPClient) {
+		c.addr = addr
 	}
 }
 
@@ -120,7 +125,7 @@ func (c *{{$service.Name}}HTTPClient) {{$method.Name}}(ctx context.Context, in *
 		),
 	}
 	if c.tokenFunc != nil {
-		opts = append(opts, httpclient.BearerAuthFunc(c.tokenFunc))
+		opts = append(opts, httpclient.BearerAuthFunc(httpclient.TokenFunc(c.tokenFunc)))
 	}
 	req, err := httpclient.MakeRequest(opts...)
 	if err != nil {
