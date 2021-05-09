@@ -46,31 +46,31 @@ type {{$service.Name}}HTTPClient struct {
 
 type {{$service.Name}}HTTPClientOpt func(*{{$service.Name}}HTTPClient)
 
-func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}TLSConfig(tls *tls.Config) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.tls = tls
 	}
 }
 
-func Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}Scheme(scheme string) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.scheme = scheme
 	}
 }
 
-func Address(addr string) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}Address(addr string) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.addr = addr
 	}
 }
 
-func BearerAuth(token TokenFunc) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}BearerAuth(token TokenFunc) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.tokenFunc = token
 	}
 }
 
-func Client(client *httpclient.Client) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}Client(client *httpclient.Client) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.client = client
 	}

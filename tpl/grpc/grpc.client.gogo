@@ -30,13 +30,13 @@ type {{$service.Name}}GrpcClient struct{
 
 type {{$service.Name}}GrpcClientOption func(*{{$service.Name}}GrpcClient)
 
-func Address(addr string) {{$service.Name}}GrpcClientOption {
+func {{$service.Name}}Address(addr string) {{$service.Name}}GrpcClientOption {
     return func(c *{{$service.Name}}GrpcClient){
         c.addr = addr
     }
 }
 
-func TLSConfig(tls *tls.Config) {{$service.Name}}GrpcClientOption {
+func {{$service.Name}}TLSConfig(tls *tls.Config) {{$service.Name}}GrpcClientOption {
     return func(c *{{$service.Name}}GrpcClient){
         c.tls = tls
     }

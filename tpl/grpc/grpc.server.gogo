@@ -23,19 +23,19 @@ type {{$service.Name}}GrpcServer struct{
 
 type {{$service.Name}}GrpcServerOption func(*{{$service.Name}}GrpcServer)
 
-func Address(addr string) {{$service.Name}}GrpcServerOption {
+func {{$service.Name}}Address(addr string) {{$service.Name}}GrpcServerOption {
 	return func(svc *{{$service.Name}}GrpcServer) {
 		svc.addr = addr
 	}
 }
 
-func TLSConfig(tls *tls.Config) {{$service.Name}}GrpcServerOption {
+func {{$service.Name}}TLSConfig(tls *tls.Config) {{$service.Name}}GrpcServerOption {
 	return func(svc *{{$service.Name}}GrpcServer) {
 		svc.tls = tls
 	}
 }
 
-func Service(service pb.{{$service.Name}}Server) {{$service.Name}}GrpcServerOption {
+func {{$service.Name}}Service(service pb.{{$service.Name}}Server) {{$service.Name}}GrpcServerOption {
 	return func(svc *{{$service.Name}}GrpcServer) {
 		svc.service = service
 	}

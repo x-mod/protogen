@@ -34,25 +34,25 @@ type {{$service.Name}}HTTPServer struct{
 
 type {{$service.Name}}HTTPServerOption func(*{{$service.Name}}HTTPServer)
 
-func Address(addr string) {{$service.Name}}HTTPServerOption {
+func {{$service.Name}}Address(addr string) {{$service.Name}}HTTPServerOption {
     return func(srv *{{$service.Name}}HTTPServer) {
         srv.addr = addr
     }
 }
 
-func Ping(uri string) {{$service.Name}}HTTPServerOption {
+func {{$service.Name}}Ping(uri string) {{$service.Name}}HTTPServerOption {
     return func(srv *{{$service.Name}}HTTPServer) {
         srv.pingURI = uri
     }
 }
 
-func TLSConfig(tls *tls.Config) {{$service.Name}}HTTPServerOption {
+func {{$service.Name}}TLSConfig(tls *tls.Config) {{$service.Name}}HTTPServerOption {
     return func(srv *{{$service.Name}}HTTPServer) {
         srv.tls = tls
     }
 }
 
-func Service(service pb.{{$service.Name}}Server) {{$service.Name}}HTTPServerOption {
+func {{$service.Name}}Service(service pb.{{$service.Name}}Server) {{$service.Name}}HTTPServerOption {
 	return func(srv *{{$service.Name}}HTTPServer) {
 		srv.service = service
 	}
