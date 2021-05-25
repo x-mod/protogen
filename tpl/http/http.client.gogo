@@ -34,13 +34,13 @@ func {{$service.Name}}HTTPAddr() string {
     return fmt.Sprintf("%s:%d", {{$service.Name}}HTTPName(), {{$service.Name}}HTTPPort())
 }
 
-type TokenFunc func() string
+type {{$service.Name}}TokenFunc func() string
 
 type {{$service.Name}}HTTPClient struct {
 	addr       string
 	scheme     string
 	tls 	   *tls.Config
-	tokenFunc  TokenFunc
+	tokenFunc  {{$service.Name}}TokenFunc
 	client     *httpclient.Client
 }
 
@@ -64,7 +64,7 @@ func {{$service.Name}}Address(addr string) {{$service.Name}}HTTPClientOpt {
 	}
 }
 
-func {{$service.Name}}BearerAuth(token TokenFunc) {{$service.Name}}HTTPClientOpt {
+func {{$service.Name}}BearerAuth(token {{$service.Name}}TokenFunc) {{$service.Name}}HTTPClientOpt {
 	return func(c *{{$service.Name}}HTTPClient) {
 		c.tokenFunc = token
 	}
