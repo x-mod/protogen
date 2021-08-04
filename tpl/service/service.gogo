@@ -10,6 +10,7 @@ import (
 
 {{- range $service := $obj.Services}}
 type {{$service.Name}}Service struct{
+    pb.Unimplemented{{$service.Name}}Server
 }
 
 func New{{$service.Name}}Service() *{{$service.Name}}Service {
@@ -18,7 +19,7 @@ func New{{$service.Name}}Service() *{{$service.Name}}Service {
 
 {{range $method := $service.Methods -}}
 func (svc *{{$service.Name}}Service) {{$method.Name}}(ctx context.Context, req *pb.{{$method.RequestType}}) (*pb.{{$method.ReturnsType}}, error) {
-	return nil, fmt.Errorf("{{$method.Name}} unimplemented")
+	return svc.Unimplemented{{$service.Name}}Server.{{$method.Name}}(ctx, req)
 }
 {{end -}}
 
