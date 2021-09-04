@@ -1,4 +1,4 @@
-module code.subscriber.one/subscriber/protogen
+module github.com/x-mod/protogen
 
 go 1.14
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "code.subscriber.one/subscriber/protogen/gen"
 	"github.com/x-mod/build"
 	"github.com/x-mod/cmd"
+	_ "github.com/x-mod/protogen/gen"
 )
 
 //go:generate go-bindata -prefix tpl -nometadata -o tpl/bindata.go -ignore bindata.go -pkg tpl tpl/...

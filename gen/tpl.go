@@ -5,9 +5,9 @@ import (
 	"strings"
 	"text/template"
 
-	"code.subscriber.one/subscriber/protogen/tpl"
 	"github.com/spf13/afero"
 	"github.com/x-mod/errors"
+	"github.com/x-mod/protogen/tpl"
 )
 
 func getTemplate(prefix string) (*template.Template, error) {
